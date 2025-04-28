@@ -2,6 +2,10 @@
 
 A real-time peer-to-peer chat application built with React, TypeScript, and PeerJS. This application allows users to communicate directly with each other without the need for a central server.
 
+## Demo
+
+Try out the live demo at [https://peerjschat.vercel.app/](https://peerjschat.vercel.app/)
+
 ## Features
 
 - Real-time peer-to-peer messaging
