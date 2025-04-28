@@ -11,7 +11,7 @@ interface Message {
 interface LogEntry {
   timestamp: string
   message: string
-  type: 'info' | 'error' | 'success'
+  type: 'info' | 'error' | 'success' | 'warning'
 }
 
 interface Connection {
@@ -31,6 +31,10 @@ function App() {
   const peerRef = useRef<Peer | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const initialPeerIdRef = useRef<string | null>(null)
+  const [isReconnecting, setIsReconnecting] = useState(false)
+  const reconnectAttemptsRef = useRef(0)
+  const MAX_RECONNECT_ATTEMPTS = 5
+  const RECONNECT_DELAY = 3000 // 3 seconds
 
   // Get peerId from URL parameters
   useEffect(() => {
@@ -51,7 +55,7 @@ function App() {
     }
   }, [peerId, connections.length])
 
-  const addLog = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
+  const addLog = (message: string, type: 'info' | 'error' | 'success' | 'warning' = 'info') => {
     const timestamp = new Date().toLocaleTimeString()
     setLogs(prev => [...prev, { timestamp, message, type }])
     // Scroll to bottom of logs
@@ -93,6 +97,8 @@ function App() {
     peer.on('open', (id) => {
       addLog(`Peer opened with ID: ${id}`, 'success')
       setPeerId(id)
+      setIsReconnecting(false)
+      reconnectAttemptsRef.current = 0
     })
 
     // Handle incoming connections
@@ -124,13 +130,111 @@ function App() {
 
     // Handle peer errors
     peer.on('error', (err) => {
-      addLog(`Peer error: ${err}`, 'error')
-      if (err.type === 'peer-unavailable') {
-        addLog('Peer is unavailable. They might be offline or behind a strict firewall.', 'error')
-      } else if (err.type === 'disconnected') {
-        addLog('Disconnected from signaling server. Attempting to reconnect...', 'error')
+      addLog(`Peer error: ${err.type} - ${err.message}`, 'error')
+      
+      switch (err.type) {
+        case 'browser-incompatible':
+          addLog('Your browser does not support WebRTC features. Please use a modern browser.', 'error')
+          break;
+          
+        case 'disconnected':
+          addLog('Disconnected from server. Attempting to reconnect...', 'error')
+          handleReconnect()
+          break;
+          
+        case 'invalid-id':
+        case 'invalid-key':
+          addLog('Invalid configuration. Please refresh the page.', 'error')
+          break;
+          
+        case 'network':
+          addLog('Network connection lost. Attempting to reconnect...', 'error')
+          handleReconnect()
+          break;
+          
+        case 'peer-unavailable':
+          addLog('The peer you are trying to connect to is unavailable.', 'error')
+          break;
+          
+        case 'ssl-unavailable':
+          addLog('SSL connection unavailable. Please refresh the page.', 'error')
+          break;
+          
+        case 'server-error':
+        case 'socket-error':
+        case 'socket-closed':
+          addLog('Server connection error. Attempting to reconnect...', 'error')
+          handleReconnect()
+          break;
+          
+        case 'unavailable-id':
+          if (connections.length > 0) {
+            addLog('Your ID is taken but you have active connections. Continuing...', 'warning')
+          } else {
+            addLog('Your ID is taken. Generating a new ID...', 'error')
+            handleReconnect(true) // Force new ID
+          }
+          break;
+          
+        case 'webrtc':
+          addLog('WebRTC error. Attempting to reconnect...', 'error')
+          handleReconnect()
+          break;
+          
+        default:
+          addLog(`Unknown error: ${err.type}`, 'error')
+          break;
       }
     })
+
+    const handleReconnect = (forceNewId = false) => {
+      if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+        addLog('Max reconnection attempts reached. Please refresh the page.', 'error')
+        return
+      }
+
+      setIsReconnecting(true)
+      reconnectAttemptsRef.current += 1
+      addLog(`Reconnection attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS}`, 'info')
+
+      setTimeout(() => {
+        if (peerRef.current) {
+          addLog('Attempting to reconnect...', 'info')
+          if (forceNewId) {
+            // Destroy current peer and create a new one with a new ID
+            peerRef.current.destroy()
+            const newPeer = new Peer({
+              debug: 3,
+              config: {
+                iceServers: [
+                  { urls: 'stun:stun.l.google.com:19302' },
+                  { urls: 'stun:stun1.l.google.com:19302' },
+                  { urls: 'stun:stun2.l.google.com:19302' },
+                  { urls: 'stun:stun3.l.google.com:19302' },
+                  { urls: 'stun:stun4.l.google.com:19302' },
+                  {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                  },
+                  {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                  },
+                  {
+                    urls: 'stun:openrelay.metered.ca:80'
+                  }
+                ]
+              }
+            })
+            peerRef.current = newPeer
+          } else {
+            peerRef.current.reconnect()
+          }
+        }
+      }, RECONNECT_DELAY)
+    }
 
     return () => {
       addLog('Cleaning up peer')
@@ -198,6 +302,11 @@ function App() {
   return (
     <div className="chat-container">
       <h1>PeerJS Chat</h1>
+      {isReconnecting && (
+        <div className="reconnecting-banner">
+          Attempting to reconnect... ({reconnectAttemptsRef.current}/{MAX_RECONNECT_ATTEMPTS})
+        </div>
+      )}
       <div className="peer-id-container">
         <p>Your ID: {peerId}</p>
         {peerId && (

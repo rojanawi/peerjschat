@@ -223,3 +223,25 @@ button.connecting {
   font-family: monospace;
   font-size: 0.9rem;
 }
+
+.reconnecting-banner {
+  background-color: #ff9800;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
