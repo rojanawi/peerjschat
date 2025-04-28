@@ -1,3 +1,61 @@
+# PeerJS Chat
+
+A real-time peer-to-peer chat application built with React, TypeScript, and PeerJS. This application allows users to communicate directly with each other without the need for a central server.
+
+## Features
+
+- Real-time peer-to-peer messaging
+- Modern React + TypeScript implementation
+- Clean and responsive UI
+- No central server required for communication
+
+## Tech Stack
+
+- React 18
+- TypeScript
+- PeerJS for WebRTC communication
+- Vite for fast development and building
+- CSS for styling
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+4. Open your browser and navigate to the provided local URL
+
+## Building for Production
+
+To create a production build:
+
+```bash
+npm run build
+```
+
+The build artifacts will be stored in the `dist/` directory.
+
+## Project Structure
+
+- `src/` - Source code
+  - `App.tsx` - Main application component
+  - `main.tsx` - Application entry point
+  - `assets/` - Static assets
+  - `index.css` - Global styles
+
+## Development
+
+This project uses Vite for development and building. The following scripts are available:
+
+- `npm run dev` - Start development server
+- `npm run build` - Create production build
+- `npm run preview` - Preview production build locally
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
